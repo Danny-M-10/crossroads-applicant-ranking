@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}Ranking in Progress — {{ org_short_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto text-center">
+    <h1 class="text-2xl font-bold text-gray-900 mb-2">Ranking in Progress</h1>
+    <p class="text-gray-600 mb-8">{{ session.job_role.title }}</p>
+
+    <div id="progress-area"
+         hx-get="/rankings/{{ session.id }}/progress"
+         hx-trigger="every 2s"
+         hx-swap="innerHTML">
+        {% include "partials/_progress_bar.html" %}
+    </div>
+</div>
+{% endblock %}

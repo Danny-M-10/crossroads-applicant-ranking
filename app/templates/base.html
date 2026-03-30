@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}{{ org_short_name }} — {{ product_name }}{% endblock %}</title>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              crossroads: {
+                nav: "{{ color_nav_bg }}",
+                navhover: "{{ color_nav_bg_hover }}",
+                accent: "{{ color_accent }}",
+                soft: "{{ color_flash_bg }}",
+                softborder: "{{ color_flash_border }}",
+                onsoft: "{{ color_text_on_soft }}",
+              }
+            }
+          }
+        }
+      };
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@2.0.3"></script>
+    <style>
+        [hx-indicator] .htmx-indicator { display: none; }
+        .htmx-request .htmx-indicator { display: inline-block; }
+    </style>
+</head>
+<body class="min-h-screen" style="background-color: {{ color_body_bg }};">
+    <nav class="shadow-lg" style="background-color: {{ color_nav_bg }}; color: {{ color_nav_text }};">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <a href="/" class="text-xl font-bold tracking-tight hover:opacity-90 transition-opacity" style="color: {{ color_nav_text }};">{{ org_short_name }} — {{ product_name }}</a>
+            <div class="flex items-center gap-6 text-sm font-medium">
+                <a href="/" class="transition-colors" style="color: {{ color_nav_text }};" onmouseover="this.style.color='{{ color_nav_link_hover }}'" onmouseout="this.style.color='{{ color_nav_text }}'">Dashboard</a>
+                <a href="/jobs" class="transition-colors" style="color: {{ color_nav_text }};" onmouseover="this.style.color='{{ color_nav_link_hover }}'" onmouseout="this.style.color='{{ color_nav_text }}'">Job Roles</a>
+                <a href="/rankings" class="transition-colors" style="color: {{ color_nav_text }};" onmouseover="this.style.color='{{ color_nav_link_hover }}'" onmouseout="this.style.color='{{ color_nav_text }}'">Rankings</a>
+                {% if request.session.get('user_email') %}
+                <span class="text-xs opacity-90">{{ request.session.get('user_name') or request.session.get('user_email') }}</span>
+                <a href="/logout" class="text-xs border px-2 py-1 rounded transition-colors" style="border-color: rgba(255,255,255,0.35); color: {{ color_nav_link_hover }};" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='transparent'">Sign out</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto py-8 px-4">
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
+        <div class="mb-6">
+            {% for msg in messages %}
+            <div class="px-4 py-3 rounded mb-2 border" style="background-color: {{ color_flash_bg }}; border-color: {{ color_flash_border }}; color: {{ color_flash_text }};">
+                {{ msg }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="text-center text-xs py-6" style="color: {{ color_footer_text }};">
+        <p>{{ footer_ai_line }}</p>
+        <p class="mt-1"><a href="{{ website_url }}" class="underline hover:opacity-80" style="color: {{ color_accent }};">{{ website_label }}</a></p>
+    </footer>
+</body>
+</html>

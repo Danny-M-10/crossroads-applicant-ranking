@@ -1,0 +1,304 @@
+{% extends "base.html" %}
+
+{% block title %}Ranking Results — {{ session.job_role.title }} — {{ org_short_name }}{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900">Ranking Results</h1>
+        <p class="text-gray-600">{{ session.job_role.title }} &mdash; {{ session.total_candidates }} candidates evaluated &mdash; {{ session.created_at.strftime('%b %d, %Y') }}</p>
+    </div>
+    <div class="flex items-center gap-3 flex-wrap justify-end">
+        <div class="flex items-center gap-2 text-sm text-gray-600">
+            <label for="top-n-select" class="whitespace-nowrap font-medium">Top</label>
+            <select id="top-n-select" onchange="updateReportLinks(this.value)"
+                class="border border-gray-300 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-crossroads-accent">
+                <option value="10">10</option>
+                <option value="15" selected>15</option>
+                <option value="20">20</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+            </select>
+            <span class="whitespace-nowrap">applicants</span>
+        </div>
+        <a id="docx-link" href="/reports/{{ session.id }}/docx?top_n=15"
+           class="inline-flex items-center px-4 py-2 bg-crossroads-nav text-white rounded-lg hover:bg-crossroads-navhover transition-colors font-medium text-sm">
+            Download DOCX
+        </a>
+        <a id="pdf-link" href="/reports/{{ session.id }}/pdf?top_n=15"
+           class="inline-flex items-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm">
+            Download PDF
+        </a>
+        <a id="html-link" href="/reports/{{ session.id }}/html?top_n=15"
+           class="inline-flex items-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm">
+            Download HTML
+        </a>
+        <a href="/rankings" class="inline-flex items-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm">
+            Back to List
+        </a>
+        <button
+            hx-delete="/rankings/{{ session.id }}"
+            hx-confirm="Delete this ranking session and all its data? This cannot be undone."
+            class="inline-flex items-center px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors text-sm">
+            Delete Session
+        </button>
+    </div>
+</div>
+
+<script>
+function updateReportLinks(n) {
+    const id = {{ session.id }};
+    document.getElementById('docx-link').href = `/reports/${id}/docx?top_n=${n}`;
+    document.getElementById('pdf-link').href  = `/reports/${id}/pdf?top_n=${n}`;
+    document.getElementById('html-link').href = `/reports/${id}/html?top_n=${n}`;
+}
+</script>
+
+{% if candidates %}
+<div class="bg-white rounded-lg shadow overflow-x-auto">
+    <table class="w-full text-sm">
+        <thead>
+            <tr class="bg-gray-50 border-b border-gray-200">
+                <th class="px-4 py-3 text-left font-semibold text-gray-600">Rank</th>
+                <th class="px-4 py-3 text-left font-semibold text-gray-600">Candidate</th>
+                <th class="px-4 py-3 text-left font-semibold text-gray-600">File</th>
+                {% for c in criteria %}
+                <th class="px-4 py-3 text-center font-semibold text-gray-600">{{ c.name }}<br><span class="font-normal text-gray-400">({{ c.weight }}%)</span></th>
+                {% endfor %}
+                <th class="px-4 py-3 text-center font-semibold text-gray-600">Total</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+            {% for candidate in candidates %}
+            <tr class="hover:bg-gray-50 {% if candidate.rank and candidate.rank <= 10 %}bg-crossroads-soft/50{% endif %}">
+                <td class="px-4 py-3 font-bold text-gray-900">
+                    {% if candidate.rank %}#{{ candidate.rank }}{% else %}&mdash;{% endif %}
+                </td>
+                <td class="px-4 py-3">
+                    <div class="font-medium text-gray-900">{{ candidate.candidate_name or 'Unknown' }}</div>
+                    {% if candidate.ai_summary %}
+                    <div class="text-xs text-gray-500 mt-1 max-w-xs truncate">{{ candidate.ai_summary }}</div>
+                    {% endif %}
+                </td>
+                <td class="px-4 py-3 text-gray-500 text-xs">{{ candidate.filename }}</td>
+                {% set cs_map = {} %}
+                {% for cs in candidate.criterion_scores %}
+                    {% set _ = cs_map.update({cs.criterion_name: cs}) %}
+                {% endfor %}
+                {% for c in criteria %}
+                    {% set cs = cs_map.get(c.name) %}
+                    <td class="px-4 py-3 text-center">
+                        {% if cs %}
+                        <span class="font-medium {% if cs.score >= 7 %}text-crossroads-accent{% elif cs.score <= 3 %}text-red-600{% else %}text-gray-700{% endif %}">
+                            {{ "%.1f"|format(cs.score) }}
+                        </span>
+                        {% else %}
+                        <span class="text-gray-400">&mdash;</span>
+                        {% endif %}
+                    </td>
+                {% endfor %}
+                <td class="px-4 py-3 text-center">
+                    {% if candidate.weighted_total is not none %}
+                    <span class="font-bold text-lg text-crossroads-nav">{{ "%.1f"|format(candidate.weighted_total) }}</span>
+                    {% else %}
+                    <span class="text-gray-400">&mdash;</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% if candidate.ai_summary %}
+            <tr class="border-b border-gray-200">
+                <td colspan="{{ criteria|length + 4 }}" class="px-4 py-2 bg-gray-50/50">
+                    <div class="text-xs text-gray-600">
+                        <strong>Summary:</strong> {{ candidate.ai_summary }}
+                        {% if candidate.raw_scores and candidate.raw_scores.get('red_flags') %}
+                        <br><strong class="text-red-600">Concerns:</strong>
+                        {% for flag in candidate.raw_scores['red_flags'] %}
+                        <span class="text-red-600">{{ flag }}{% if not loop.last %}; {% endif %}</span>
+                        {% endfor %}
+                        {% endif %}
+                        {% if candidate.scoring_error %}
+                        <br><strong class="text-yellow-600">Warning:</strong> {{ candidate.scoring_error }}
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% endif %}
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="bg-white rounded-lg shadow p-8 text-center">
+    <p class="text-gray-500">No scored candidates in this session.</p>
+</div>
+{% endif %}
+
+{% if error_candidates %}
+<div class="mt-6 bg-white rounded-lg shadow p-6">
+    <h2 class="text-lg font-semibold text-gray-900 mb-3">Candidates with Errors</h2>
+    <div class="space-y-2">
+        {% for c in error_candidates %}
+        <div class="flex justify-between items-center text-sm bg-red-50 p-3 rounded">
+            <span class="font-medium text-gray-700">{{ c.filename }}</span>
+            <span class="text-red-600">{{ c.scoring_error }}</span>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- ── AI Chatbot Widget ── -->
+<div id="chat-widget" class="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
+
+    <!-- Toggle button -->
+    <button id="chat-toggle"
+        onclick="toggleChat()"
+        class="w-14 h-14 bg-crossroads-nav hover:bg-crossroads-navhover text-white rounded-full shadow-lg flex items-center justify-center transition-colors"
+        title="Ask AI about this ranking">
+        <svg id="chat-icon-open" xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-3 3v-3z"/>
+        </svg>
+        <svg id="chat-icon-close" xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+    </button>
+
+    <!-- Chat panel -->
+    <div id="chat-panel" class="hidden w-96 bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col" style="height:520px;">
+
+        <!-- Header -->
+        <div class="bg-crossroads-nav text-white px-4 py-3 rounded-t-2xl flex items-center justify-between">
+            <div>
+                <div class="font-semibold text-sm">AI Ranking Assistant</div>
+                <div class="text-xs text-blue-100">Ask anything about these candidates</div>
+            </div>
+            <button onclick="toggleChat()" class="text-blue-100 hover:text-white">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Messages -->
+        <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-3 text-sm">
+            <div class="flex gap-2">
+                <div class="w-7 h-7 rounded-full bg-crossroads-nav flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                    </svg>
+                </div>
+                <div class="bg-gray-100 rounded-2xl rounded-tl-sm px-3 py-2 text-gray-700 max-w-xs">
+                    Hi! I have full context on all {{ candidates|length }} candidates for the <strong>{{ session.job_role.title }}</strong> role. What would you like to know?
+                </div>
+            </div>
+            <!-- Suggested questions -->
+            <div id="suggestions" class="flex flex-wrap gap-2 pl-9">
+                <button onclick="sendSuggestion(this)" class="text-xs bg-crossroads-soft border border-crossroads-softborder text-crossroads-onsoft rounded-full px-3 py-1 hover:bg-blue-100 transition-colors">Who are the top 3?</button>
+                <button onclick="sendSuggestion(this)" class="text-xs bg-crossroads-soft border border-crossroads-softborder text-crossroads-onsoft rounded-full px-3 py-1 hover:bg-blue-100 transition-colors">Any red flags?</button>
+                <button onclick="sendSuggestion(this)" class="text-xs bg-crossroads-soft border border-crossroads-softborder text-crossroads-onsoft rounded-full px-3 py-1 hover:bg-blue-100 transition-colors">Who scored highest on experience?</button>
+                <button onclick="sendSuggestion(this)" class="text-xs bg-crossroads-soft border border-crossroads-softborder text-crossroads-onsoft rounded-full px-3 py-1 hover:bg-blue-100 transition-colors">Who should I interview first?</button>
+            </div>
+        </div>
+
+        <!-- Input -->
+        <div class="border-t border-gray-200 p-3 flex gap-2">
+            <input id="chat-input" type="text" placeholder="Ask about candidates..."
+                class="flex-1 border border-gray-300 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-crossroads-accent"
+                onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();sendMessage();}">
+            <button onclick="sendMessage()"
+                class="w-9 h-9 bg-crossroads-nav hover:bg-crossroads-navhover text-white rounded-full flex items-center justify-center flex-shrink-0 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+const SESSION_ID = {{ session.id }};
+let chatHistory = [];
+let chatOpen = false;
+
+function toggleChat() {
+    chatOpen = !chatOpen;
+    document.getElementById('chat-panel').classList.toggle('hidden', !chatOpen);
+    document.getElementById('chat-icon-open').classList.toggle('hidden', chatOpen);
+    document.getElementById('chat-icon-close').classList.toggle('hidden', !chatOpen);
+    if (chatOpen) document.getElementById('chat-input').focus();
+}
+
+function sendSuggestion(btn) {
+    document.getElementById('chat-input').value = btn.textContent;
+    document.getElementById('suggestions').remove();
+    sendMessage();
+}
+
+function appendMessage(role, text) {
+    const container = document.getElementById('chat-messages');
+    const isUser = role === 'user';
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'flex gap-2' + (isUser ? ' justify-end' : '');
+
+    if (!isUser) {
+        wrapper.innerHTML = `
+            <div class="w-7 h-7 rounded-full bg-crossroads-nav flex items-center justify-center flex-shrink-0 mt-0.5">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                </svg>
+            </div>
+            <div class="bg-gray-100 rounded-2xl rounded-tl-sm px-3 py-2 text-gray-700 max-w-xs whitespace-pre-wrap">${escapeHtml(text)}</div>`;
+    } else {
+        wrapper.innerHTML = `
+            <div class="bg-crossroads-nav text-white rounded-2xl rounded-tr-sm px-3 py-2 max-w-xs whitespace-pre-wrap">${escapeHtml(text)}</div>`;
+    }
+
+    container.appendChild(wrapper);
+    container.scrollTop = container.scrollHeight;
+    return wrapper;
+}
+
+function escapeHtml(text) {
+    return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+async function sendMessage() {
+    const input = document.getElementById('chat-input');
+    const message = input.value.trim();
+    if (!message) return;
+    input.value = '';
+    input.disabled = true;
+
+    appendMessage('user', message);
+
+    // Typing indicator
+    const typingEl = appendMessage('model', '…');
+    typingEl.querySelector('div:last-child').classList.add('animate-pulse');
+
+    try {
+        const res = await fetch(`/rankings/${SESSION_ID}/chat`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ message, history: chatHistory })
+        });
+        const data = await res.json();
+        const answer = data.response || 'No response.';
+
+        typingEl.remove();
+        appendMessage('model', answer);
+
+        chatHistory.push({role: 'user', text: message});
+        chatHistory.push({role: 'model', text: answer});
+        // Keep history manageable
+        if (chatHistory.length > 20) chatHistory = chatHistory.slice(-20);
+    } catch(e) {
+        typingEl.remove();
+        appendMessage('model', 'Sorry, something went wrong. Please try again.');
+    }
+
+    input.disabled = false;
+    input.focus();
+}
+</script>
+{% endblock %}

@@ -1,0 +1,38 @@
+<div class="border border-gray-200 rounded-lg p-3 max-h-64 overflow-y-auto bg-white">
+    {% if parent_id %}
+    <a href="#"
+       hx-get="/cloud/browse/{{ provider_name }}"
+       hx-target="#folder-browser-{{ provider_name }}"
+       class="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-2 pb-2 border-b">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        Back to root
+    </a>
+    {% endif %}
+
+    {% if folders %}
+        {% for folder in folders %}
+        <div class="flex items-center justify-between py-1.5 px-2 hover:bg-gray-50 rounded text-sm">
+            <a href="#"
+               hx-get="/cloud/browse/{{ provider_name }}?folder_id={{ folder.id }}"
+               hx-target="#folder-browser-{{ provider_name }}"
+               class="flex items-center gap-2 text-gray-700 hover:text-crossroads-accent flex-1">
+                <svg class="w-4 h-4 text-yellow-500 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/></svg>
+                {{ folder.name }}
+            </a>
+            <button type="button"
+                    onclick="selectCloudFolder('{{ provider_name }}', '{{ folder.id }}', '{{ folder.name }}')"
+                    class="px-2 py-1 text-xs bg-blue-100 text-crossroads-accent rounded hover:bg-blue-200 shrink-0 ml-2">
+                Select
+            </button>
+        </div>
+        {% endfor %}
+    {% else %}
+        <p class="text-sm text-gray-400 py-2">No subfolders found.</p>
+    {% endif %}
+
+    {% if files_count is not none %}
+    <div class="mt-2 pt-2 border-t text-xs text-gray-500">
+        {{ files_count }} resume file{{ 's' if files_count != 1 else '' }} (PDF/DOCX) in this folder
+    </div>
+    {% endif %}
+</div>

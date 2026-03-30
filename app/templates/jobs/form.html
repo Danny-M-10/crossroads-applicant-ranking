@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Edit' if role else 'New' }} Job Role — {{ org_short_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl">
+    <h1 class="text-2xl font-bold text-gray-900 mb-6">{{ 'Edit' if role else 'New' }} Job Role</h1>
+
+    <form method="post" action="{{ '/jobs/' ~ role.id if role else '/jobs' }}" enctype="multipart/form-data" class="space-y-6">
+        {% if role %}
+        <input type="hidden" name="_method" value="PUT">
+        {% endif %}
+
+        <div>
+            <label for="title" class="block text-sm font-medium text-gray-700 mb-1">Job Title</label>
+            <input type="text" name="title" id="title" required
+                   value="{{ role.title if role else '' }}"
+                   placeholder="e.g., Route Driver"
+                   class="w-full rounded-lg border-gray-300 border px-3 py-2 focus:ring-2 focus:ring-crossroads-accent focus:border-crossroads-accent">
+        </div>
+
+        <div>
+            <label for="description" class="block text-sm font-medium text-gray-700 mb-1">Job Description</label>
+
+            <div class="mb-2 flex items-center gap-3">
+                <label class="text-sm text-gray-500 shrink-0">Upload from file:</label>
+                <input type="file"
+                       name="file"
+                       id="description_file"
+                       accept=".pdf,.docx,.txt"
+                       hx-post="/jobs/parse-description-file"
+                       hx-trigger="change"
+                       hx-target="#upload-status"
+                       hx-encoding="multipart/form-data"
+                       hx-include="this"
+                       class="text-sm text-gray-600 file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:font-medium file:bg-crossroads-soft file:text-crossroads-onsoft hover:file:bg-blue-100">
+                <div id="upload-status" class="text-sm"></div>
+            </div>
+
+            <textarea name="description" id="description" rows="6" required
+                      placeholder="Full job description for this role... (or upload a file above)"
+                      class="w-full rounded-lg border-gray-300 border px-3 py-2 focus:ring-2 focus:ring-crossroads-accent focus:border-crossroads-accent">{{ role.description if role else '' }}</textarea>
+        </div>
+
+        <div>
+            <div class="flex justify-between items-center mb-3">
+                <label class="block text-sm font-medium text-gray-700">Scoring Criteria</label>
+                <span id="weight-total" class="text-sm font-medium">
+                    Total: <span id="weight-sum">0</span>% <span id="weight-status" class="text-red-600">(must equal 100%)</span>
+                </span>
+            </div>
+
+            <div id="criteria-list" class="space-y-3">
+                {% if role and role.criteria %}
+                    {% for c in role.criteria %}
+                    <div class="criterion-row flex gap-2 items-start bg-gray-50 p-3 rounded-lg">
+                        <div class="flex-1">
+                            <input type="text" name="criteria_name" required
+                                   value="{{ c.name }}"
+                                   placeholder="Criterion name"
+                                   class="w-full rounded border-gray-300 border px-2 py-1.5 text-sm">
+                        </div>
+                        <div class="w-20">
+                            <input type="number" name="criteria_weight" required min="0" max="100"
+                                   value="{{ c.weight }}"
+                                   placeholder="Wt%"
+                                   class="w-full rounded border-gray-300 border px-2 py-1.5 text-sm weight-input">
+                        </div>
+                        <div class="flex-1">
+                            <input type="text" name="criteria_description"
+                                   value="{{ c.description }}"
+                                   placeholder="Description (optional)"
+                                   class="w-full rounded border-gray-300 border px-2 py-1.5 text-sm">
+                        </div>
+                        <button type="button" onclick="this.closest('.criterion-row').remove(); updateWeightTotal();"
+                                class="px-2 py-1.5 text-red-500 hover:text-red-700 text-sm font-bold">&times;</button>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+
+            <button type="button" onclick="addCriterionRow()"
+                    class="mt-3 px-3 py-1.5 text-sm border border-dashed border-gray-400 rounded-lg text-gray-600 hover:border-crossroads-accent hover:text-crossroads-accent transition-colors">
+                + Add Criterion
+            </button>
+        </div>
+
+        <div class="flex gap-3 pt-4">
+            <button type="submit" id="submit-btn"
+                    class="px-6 py-2 bg-crossroads-nav text-white rounded-lg hover:bg-crossroads-navhover transition-colors font-medium">
+                {{ 'Update' if role else 'Create' }} Job Role
+            </button>
+            <a href="/jobs" class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                Cancel
+            </a>
+        </div>
+    </form>
+</div>
+
+<script>
+function addCriterionRow() {
+    const list = document.getElementById('criteria-list');
+    const row = document.createElement('div');
+    row.className = 'criterion-row flex gap-2 items-start bg-gray-50 p-3 rounded-lg';
+    row.innerHTML = `
+        <div class="flex-1">
+            <input type="text" name="criteria_name" required placeholder="Criterion name"
+                   class="w-full rounded border-gray-300 border px-2 py-1.5 text-sm">
+        </div>
+        <div class="w-20">
+            <input type="number" name="criteria_weight" required min="0" max="100" placeholder="Wt%"
+                   class="w-full rounded border-gray-300 border px-2 py-1.5 text-sm weight-input">
+        </div>
+        <div class="flex-1">
+            <input type="text" name="criteria_description" placeholder="Description (optional)"
+                   class="w-full rounded border-gray-300 border px-2 py-1.5 text-sm">
+        </div>
+        <button type="button" onclick="this.closest('.criterion-row').remove(); updateWeightTotal();"
+                class="px-2 py-1.5 text-red-500 hover:text-red-700 text-sm font-bold">&times;</button>
+    `;
+    list.appendChild(row);
+    row.querySelector('.weight-input').addEventListener('input', updateWeightTotal);
+}
+
+function updateWeightTotal() {
+    const inputs = document.querySelectorAll('.weight-input');
+    let total = 0;
+    inputs.forEach(i => { total += parseInt(i.value) || 0; });
+    document.getElementById('weight-sum').textContent = total;
+    const status = document.getElementById('weight-status');
+    if (total === 100) {
+        status.textContent = '(valid)';
+        status.className = 'text-crossroads-accent';
+    } else {
+        status.textContent = '(must equal 100%)';
+        status.className = 'text-red-600';
+    }
+}
+
+// Attach listeners to existing weight inputs
+document.querySelectorAll('.weight-input').forEach(i => {
+    i.addEventListener('input', updateWeightTotal);
+});
+updateWeightTotal();
+</script>
+{% endblock %}

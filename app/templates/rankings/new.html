@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block title %}New Ranking Session — {{ org_short_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl">
+    <h1 class="text-2xl font-bold text-gray-900 mb-6">Start New Ranking</h1>
+
+    {% if not job_roles %}
+    <div class="bg-yellow-50 border border-yellow-200 text-yellow-800 p-4 rounded-lg mb-6">
+        You need at least one job role before starting a ranking.
+        <a href="/jobs/new" class="underline font-medium">Create one now</a>.
+    </div>
+    {% else %}
+    <form method="post" action="/rankings" enctype="multipart/form-data" class="space-y-6">
+        <div>
+            <label for="job_role_id" class="block text-sm font-medium text-gray-700 mb-1">Job Role</label>
+            <select name="job_role_id" id="job_role_id" required
+                    class="w-full rounded-lg border-gray-300 border px-3 py-2 focus:ring-2 focus:ring-crossroads-accent focus:border-crossroads-accent">
+                <option value="">Select a job role...</option>
+                {% for role in job_roles %}
+                <option value="{{ role.id }}">{{ role.title }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Resume source tabs -->
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Resume Source</label>
+            <div class="flex border-b border-gray-200">
+                <button type="button" onclick="switchTab('local')" id="tab-local"
+                        class="px-4 py-2 text-sm font-medium border-b-2 border-crossroads-nav text-crossroads-nav">
+                    Local Folder
+                </button>
+                <button type="button" onclick="switchTab('upload')" id="tab-upload"
+                        class="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">
+                    Upload Files
+                </button>
+                <button type="button" onclick="switchTab('cloud')" id="tab-cloud"
+                        class="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">
+                    Google Drive
+                </button>
+            </div>
+        </div>
+
+        <!-- Local Folder panel -->
+        <div id="panel-local">
+            <label for="folder_path" class="block text-sm font-medium text-gray-700 mb-1">Resume Folder Path</label>
+            <input type="text" name="folder_path" id="folder_path"
+                   value="{{ default_folder }}"
+                   placeholder="/path/to/resumes"
+                   hx-post="/rankings/validate-folder"
+                   hx-trigger="blur, keyup changed delay:500ms"
+                   hx-target="#folder-status"
+                   class="w-full rounded-lg border-gray-300 border px-3 py-2 focus:ring-2 focus:ring-crossroads-accent focus:border-crossroads-accent">
+            <div id="folder-status" class="mt-2 text-sm"></div>
+        </div>
+
+        <!-- Upload Files panel -->
+        <div id="panel-upload" class="hidden">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Select Resume Files</label>
+            <input type="file"
+                   name="resume_files"
+                   id="resume_files"
+                   multiple
+                   accept=".pdf,.docx,.txt"
+                   hx-post="/rankings/validate-uploads"
+                   hx-trigger="change"
+                   hx-target="#upload-file-status"
+                   hx-encoding="multipart/form-data"
+                   hx-include="this"
+                   class="w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-crossroads-soft file:text-crossroads-onsoft hover:file:bg-blue-100">
+            <p class="mt-1 text-xs text-gray-400">Accepts PDF, DOCX, and TXT files</p>
+            <div id="upload-file-status" class="mt-2 text-sm"></div>
+        </div>
+
+        <!-- Google Drive panel -->
+        <div id="panel-cloud" class="hidden">
+            <input type="hidden" name="cloud_provider" id="cloud_provider" value="">
+            <input type="hidden" name="cloud_folder_id" id="cloud_folder_id" value="">
+            <input type="hidden" name="cloud_folder_name" id="cloud_folder_name" value="">
+
+            <div id="cloud-selection" class="hidden mb-4 p-3 bg-crossroads-soft border border-crossroads-softborder rounded-lg text-sm text-crossroads-onsoft"></div>
+
+            {% if cloud_providers %}
+                {% with available_providers=cloud_providers, connections=cloud_connections %}
+                    {% include "cloud/connect_buttons.html" %}
+                {% endwith %}
+            {% else %}
+            <div class="p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
+                <p class="font-medium mb-1">Google Drive not connected</p>
+                <p>Sign in with Google to enable Drive access, or add <code class="bg-yellow-100 px-1 rounded">GOOGLE_CLIENT_ID</code> and <code class="bg-yellow-100 px-1 rounded">GOOGLE_CLIENT_SECRET</code> to your <code class="bg-yellow-100 px-1 rounded">.env</code> file.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="pt-4">
+            <button type="submit"
+                    class="px-6 py-2 bg-crossroads-nav text-white rounded-lg hover:bg-crossroads-navhover transition-colors font-medium">
+                Start Ranking
+            </button>
+            <a href="/rankings" class="ml-3 px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                Cancel
+            </a>
+        </div>
+    </form>
+
+    <script>
+    function switchTab(tab) {
+        var panels = ['local', 'upload', 'cloud'];
+        var active = ['border-crossroads-nav', 'text-crossroads-nav'];
+        var inactive = ['border-transparent', 'text-gray-500'];
+
+        panels.forEach(function(name) {
+            var panel = document.getElementById('panel-' + name);
+            var tabBtn = document.getElementById('tab-' + name);
+            if (!panel || !tabBtn) return;
+
+            if (name === tab) {
+                panel.classList.remove('hidden');
+                tabBtn.classList.add.apply(tabBtn.classList, active);
+                tabBtn.classList.remove.apply(tabBtn.classList, inactive);
+            } else {
+                panel.classList.add('hidden');
+                tabBtn.classList.remove.apply(tabBtn.classList, active);
+                tabBtn.classList.add.apply(tabBtn.classList, inactive);
+            }
+        });
+
+        // Clear inactive sources
+        if (tab !== 'local') {
+            document.getElementById('folder_path').value = '';
+        }
+        if (tab !== 'upload') {
+            var fileInput = document.getElementById('resume_files');
+            if (fileInput) fileInput.value = '';
+            var status = document.getElementById('upload-file-status');
+            if (status) status.innerHTML = '';
+        }
+        if (tab !== 'cloud') {
+            var cp = document.getElementById('cloud_provider');
+            if (cp) cp.value = '';
+            var cfi = document.getElementById('cloud_folder_id');
+            if (cfi) cfi.value = '';
+            var cfn = document.getElementById('cloud_folder_name');
+            if (cfn) cfn.value = '';
+        }
+    }
+
+    function selectCloudFolder(provider, folderId, folderName) {
+        document.getElementById('cloud_provider').value = provider;
+        document.getElementById('cloud_folder_id').value = folderId;
+        document.getElementById('cloud_folder_name').value = folderName;
+
+        var displayName = provider.replace('_', ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+        var selDiv = document.getElementById('cloud-selection');
+        selDiv.textContent = 'Selected: ' + folderName + ' on ' + displayName;
+        selDiv.classList.remove('hidden');
+    }
+    </script>
+    {% endif %}
+</div>
+{% endblock %}

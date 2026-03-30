@@ -1,0 +1,34 @@
+{% set pct = ((scored / total * 100) | int) if total > 0 else 0 %}
+
+<div class="bg-white rounded-lg shadow p-8">
+    <div class="w-full bg-gray-200 rounded-full h-4 mb-4">
+        <div class="bg-crossroads-accent h-4 rounded-full transition-all duration-500"
+             style="width: {{ pct }}%"></div>
+    </div>
+    <p class="text-gray-700 text-lg">
+        {{ scored }} of {{ total }} candidates scored
+    </p>
+    <p class="text-gray-400 text-sm mt-1">
+        {% if status == "running" %}
+        Analyzing resumes with AI...
+        {% elif status == "completed" %}
+        Complete!
+        {% elif status == "failed" %}
+        Failed
+        {% else %}
+        Starting...
+        {% endif %}
+    </p>
+
+    {% if status == "completed" %}
+    <script>
+        // Stop HTMX polling and redirect to results
+        document.getElementById('progress-area').removeAttribute('hx-trigger');
+        window.location.href = '/rankings/{{ session_id }}';
+    </script>
+    {% elif status == "failed" %}
+    <div class="mt-4 bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg text-left">
+        <strong>Error:</strong> {{ error_log or 'Unknown error' }}
+    </div>
+    {% endif %}
+</div>

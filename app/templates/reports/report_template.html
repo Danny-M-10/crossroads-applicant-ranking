@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Candidate Ranking Report — {{ job_role.title }} — {{ org_name }}</title>
+    <style>
+        @page {
+            size: letter;
+            margin: 0.65in 0.7in 0.65in 0.7in;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            font-size: 9.5pt;
+            color: #1a1a1a;
+            line-height: 1.4;
+        }
+
+        /* ── PAGE BREAKS ── */
+        .page-break { page-break-after: always; }
+
+        /* ── TOPBAR ── */
+        .topbar {
+            background: {{ report_color_header }};
+            color: {{ report_color_header_muted }};
+            font-size: 7pt;
+            font-weight: bold;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            padding: 6px 10px;
+            margin-bottom: 0;
+            width: 100%;
+        }
+        .topbar-inner {
+            width: 100%;
+        }
+        .topbar-inner td {
+            padding: 0;
+            vertical-align: middle;
+        }
+        .topbar-inner td:last-child {
+            text-align: right;
+        }
+
+        /* ── HERO ── */
+        .hero {
+            background: {{ report_color_header }};
+            padding: 20px 14px 16px;
+            margin-bottom: 18px;
+        }
+        .hero h1 {
+            font-size: 30pt;
+            font-weight: 900;
+            color: #ffffff;
+            text-transform: uppercase;
+            letter-spacing: -0.01em;
+            line-height: 1.05;
+            margin-bottom: 8px;
+        }
+        .hero .subtitle {
+            font-size: 10.5pt;
+            color: {{ report_color_header_muted }};
+            letter-spacing: 0.03em;
+            margin-bottom: 10px;
+        }
+        .hero .badges td {
+            padding: 0 6px 0 0;
+            vertical-align: top;
+        }
+        .badge {
+            background: {{ report_color_accent }};
+            color: #ebf4ff;
+            font-size: 7pt;
+            font-weight: bold;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            padding: 3px 9px;
+            display: inline-block;
+        }
+
+        /* ── SECTION LABEL ── */
+        .section-label {
+            border-bottom: 2.5px solid {{ report_color_header }};
+            padding-bottom: 4px;
+            margin-bottom: 4px;
+        }
+        .section-label td {
+            vertical-align: bottom;
+            padding: 0;
+        }
+        .section-num {
+            font-size: 20pt;
+            font-weight: 900;
+            color: #d1d5db;
+            line-height: 1;
+            padding-right: 10px;
+            white-space: nowrap;
+        }
+        .section-title {
+            font-size: 11.5pt;
+            font-weight: 800;
+            color: {{ report_color_profile_text }};
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .section-sub {
+            font-size: 7.5pt;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-top: 2px;
+            margin-bottom: 12px;
+        }
+
+        /* ── INTRO TEXT ── */
+        .intro-text {
+            font-size: 8.5pt;
+            color: #444;
+            line-height: 1.6;
+            margin: 8px 0 14px;
+        }
+
+        /* ── CRITERIA GRID ── */
+        .criteria-grid {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 6px 0;
+        }
+        .criteria-grid td {
+            vertical-align: top;
+            border-top: 3px solid {{ report_color_accent }};
+            border-left: 1px solid #d1d5db;
+            border-right: 1px solid #d1d5db;
+            border-bottom: 1px solid #d1d5db;
+            padding: 8px 8px 10px;
+            width: 1%;
+        }
+        .crit-letter  { font-size: 7pt; color: #888; text-transform: uppercase; letter-spacing: 0.06em; }
+        .crit-pct     { font-size: 16pt; font-weight: 900; color: {{ report_color_accent }}; line-height: 1; }
+        .crit-name    { font-size: 7.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin: 3px 0 6px; color: #1a1a1a; }
+        .anchor-row   { font-size: 7pt; color: #555; line-height: 1.7; }
+        .anchor-score { font-weight: 700; color: {{ report_color_accent }}; }
+
+        /* ── SCORE KEY ── */
+        .score-key {
+            font-size: 7.5pt;
+            margin: 10px 0 14px;
+        }
+        .score-key td { padding: 0 16px 0 0; vertical-align: middle; }
+        .dot {
+            display: inline-block;
+            width: 8px; height: 8px;
+            border-radius: 4px;
+            margin-right: 4px;
+        }
+
+        /* ── MATRIX TABLE ── */
+        .matrix-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 8pt;
+        }
+        .matrix-table thead td {
+            background: {{ report_color_header }};
+            color: #ffffff;
+            padding: 6px 5px;
+            font-weight: 700;
+            font-size: 7.5pt;
+            text-align: center;
+            vertical-align: bottom;
+            border: 1px solid {{ report_matrix_header_border }};
+        }
+        .matrix-table thead td.col-cand {
+            text-align: left;
+        }
+        .matrix-table thead .th-weight {
+            font-size: 6.5pt;
+            font-weight: 400;
+            opacity: 0.75;
+            display: block;
+            margin-top: 1px;
+        }
+        .matrix-table tbody td {
+            padding: 6px 5px;
+            border: 1px solid #e5e7eb;
+            vertical-align: middle;
+        }
+        .matrix-table tbody tr:nth-child(even) td { background: #f9fafb; }
+        .td-cand       { font-weight: 600; font-size: 8.5pt; }
+        .td-cand-sub   { font-size: 7pt; color: #888; margin-top: 1px; }
+        .td-score      { text-align: center; font-weight: 700; font-size: 9pt; }
+        .td-total      { text-align: center; font-weight: 900; font-size: 10pt; }
+        .td-match      { text-align: center; }
+
+        /* score colours */
+        .hi  { color: {{ report_color_accent }}; }
+        .mid { color: #b45309; }
+        .lo  { color: #b91c1c; }
+
+        /* match badges */
+        .badge-top    { color: {{ report_badge_top }}; font-weight: bold; font-size: 7pt; }
+        .badge-strong { color: #1e3a8a; font-weight: bold; font-size: 7pt; }
+        .badge-cond   { color: #92400e; font-weight: bold; font-size: 7pt; }
+        .badge-poor   { color: #7f1d1d; font-weight: bold; font-size: 7pt; }
+
+        /* ── PROFILE CARD ── */
+        .profile-header-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 6px;
+        }
+        .profile-header-table td { vertical-align: top; padding: 0; }
+        .profile-rank-col { width: 95px; padding-right: 12px !important; }
+        .profile-rank-num  { font-size: 7pt; color: #888; text-transform: uppercase; letter-spacing: 0.06em; }
+        .profile-score     { font-size: 24pt; font-weight: 900; color: {{ report_color_profile_text }}; line-height: 1; }
+        .profile-score-den { font-size: 7pt; color: #888; }
+        .profile-match     { font-size: 7pt; font-weight: bold; margin-top: 4px; }
+        .profile-name      { font-size: 14pt; font-weight: 900; text-transform: uppercase; color: {{ report_color_profile_text }}; letter-spacing: -0.01em; line-height: 1.1; }
+        .profile-file      { font-size: 7.5pt; color: #666; margin-top: 2px; margin-bottom: 6px; }
+        .profile-tags      { font-size: 7pt; font-weight: bold; }
+        .tag {
+            background: {{ report_tag_bg }};
+            color: {{ report_tag_text }};
+            padding: 2px 7px;
+            margin-right: 4px;
+            display: inline-block;
+            font-size: 6.5pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+        .profile-summary {
+            font-size: 8.5pt;
+            color: #333;
+            line-height: 1.55;
+            margin: 8px 0;
+        }
+
+        /* profile scores table */
+        .profile-scores {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 7.5pt;
+            margin-top: 6px;
+        }
+        .profile-scores thead td {
+            background: #f3f4f6;
+            padding: 4px 6px;
+            font-weight: 700;
+            border-bottom: 1.5px solid #d1d5db;
+            font-size: 7pt;
+        }
+        .profile-scores tbody td {
+            padding: 4px 6px;
+            border-bottom: 1px solid #f3f4f6;
+            vertical-align: top;
+        }
+        .ps-score { text-align: center; font-weight: 700; }
+        .ps-weight { text-align: center; color: #888; }
+
+        /* concerns box */
+        .concerns-box {
+            background: #fffbeb;
+            border-left: 3px solid #b45309;
+            padding: 6px 10px;
+            font-size: 8pt;
+            color: #78350f;
+            margin-top: 8px;
+            line-height: 1.5;
+        }
+
+        /* divider */
+        .profile-divider {
+            border: none;
+            border-top: 1px solid #e5e7eb;
+            margin: 16px 0 14px;
+        }
+
+        /* ── FOOTER ── */
+        .report-footer {
+            font-size: 7.5pt;
+            color: #9ca3af;
+            text-align: center;
+            border-top: 1px solid #e5e7eb;
+            padding-top: 8px;
+            margin-top: 24px;
+        }
+    </style>
+</head>
+<body>
+
+{# ══════════════════════════════════════════
+   SECTION 01 — COVER + CRITERIA
+══════════════════════════════════════════ #}
+
+<table class="topbar-inner" style="width:100%; background:{{ report_color_header }}; padding:6px 10px; margin-bottom:0;">
+    <tr>
+        <td style="color:{{ report_color_header_muted }}; font-size:7pt; font-weight:bold; letter-spacing:0.1em; text-transform:uppercase;">{{ report_topbar_line }}</td>
+        <td style="color:{{ report_color_header_muted }}; font-size:7pt; font-weight:bold; letter-spacing:0.1em; text-transform:uppercase; text-align:right;">Confidential &nbsp;·&nbsp; {{ generated_at.strftime('%Y') }}</td>
+    </tr>
+</table>
+
+<div class="hero">
+    <h1>Candidate<br>Ranking Report</h1>
+    <div class="subtitle">{{ job_role.title }} &nbsp;·&nbsp; {{ generated_at.strftime('%B %d, %Y') }}</div>
+    <table class="badges" style="border-collapse:collapse;">
+        <tr>
+            <td style="padding:0 6px 0 0;"><span class="badge">AI-Powered Screening</span></td>
+            <td style="padding:0 6px 0 0;"><span class="badge">{{ total_candidates }} Candidates Evaluated</span></td>
+            <td style="padding:0;"><span class="badge">Top {{ candidates|length }} Shown</span></td>
+        </tr>
+    </table>
+</div>
+
+<table class="section-label" style="width:100%;">
+    <tr>
+        <td class="section-num">01</td>
+        <td><div class="section-title">Scoring Criteria</div></td>
+    </tr>
+</table>
+<div class="section-sub">How candidates were evaluated &nbsp;·&nbsp; Scores 0–10 per criterion</div>
+
+<p class="intro-text">
+    Each candidate is scored 0–10 on each criterion below. The weighted total (max&nbsp;100) determines the final rank.
+    <strong>75+</strong> = Top Match &nbsp;|&nbsp; <strong>55–74</strong> = Strong Match &nbsp;|&nbsp; <strong>35–54</strong> = Conditional &nbsp;|&nbsp; <strong>&lt;35</strong> = Poor Fit
+</p>
+
+<table class="criteria-grid">
+    <tr>
+        {% set letters = ['A','B','C','D','E','F','G','H'] %}
+        {% for crit in criteria %}
+        <td>
+            <div class="crit-letter">{{ letters[loop.index0] }}</div>
+            <div class="crit-pct">{{ crit.weight }}%</div>
+            <div class="crit-name">{{ crit.name }}</div>
+            <div class="anchor-row"><span class="anchor-score">10&nbsp;</span>Exceeds</div>
+            <div class="anchor-row"><span class="anchor-score">7–9&nbsp;</span>Meets fully</div>
+            <div class="anchor-row"><span class="anchor-score">4–6&nbsp;</span>Partial</div>
+            <div class="anchor-row"><span class="anchor-score">1–3&nbsp;</span>Limited</div>
+            <div class="anchor-row"><span class="anchor-score">0&nbsp;&nbsp;&nbsp;</span>No evidence</div>
+        </td>
+        {% endfor %}
+    </tr>
+</table>
+
+<div class="report-footer">
+    {{ report_footer_line }} &nbsp;·&nbsp; Page 1
+</div>
+
+<div class="page-break"></div>
+
+{# ══════════════════════════════════════════
+   SECTION 02 — SCORING MATRIX
+══════════════════════════════════════════ #}
+
+<table class="section-label" style="width:100%;">
+    <tr>
+        <td class="section-num">02</td>
+        <td><div class="section-title">Candidate Scoring Matrix</div></td>
+    </tr>
+</table>
+<div class="section-sub">All candidates &nbsp;·&nbsp; Sorted by total score, high to low</div>
+
+<table class="score-key" style="border-collapse:collapse;">
+    <tr>
+        <td><span class="dot" style="background:{{ report_color_accent }};"></span> 8–10 &nbsp;Exceeds</td>
+        <td><span class="dot" style="background:#b45309;"></span> 5–7 &nbsp;Meets</td>
+        <td><span class="dot" style="background:#b91c1c;"></span> 0–4 &nbsp;Gap/Partial</td>
+    </tr>
+</table>
+
+{% set letters = ['A','B','C','D','E','F','G','H'] %}
+<table class="matrix-table">
+    <thead>
+        <tr>
+            <td class="col-cand">Candidate</td>
+            {% for crit in criteria %}
+            <td>{{ letters[loop.index0] }}&nbsp;–&nbsp;{{ crit.name }}<span class="th-weight">{{ crit.weight }}%</span></td>
+            {% endfor %}
+            <td>Total<span class="th-weight">/ 100</span></td>
+            <td>Match</td>
+        </tr>
+    </thead>
+    <tbody>
+        {% set all_scored = session.candidates | selectattr('weighted_total', '!=', none) | list | sort(attribute='weighted_total', reverse=true) %}
+        {% for candidate in all_scored %}
+        {% set total = candidate.weighted_total %}
+        {% if total >= 75 %}{% set ml = 'TOP MATCH' %}{% set mc = 'badge-top' %}
+        {% elif total >= 55 %}{% set ml = 'STRONG MATCH' %}{% set mc = 'badge-strong' %}
+        {% elif total >= 35 %}{% set ml = 'CONDITIONAL' %}{% set mc = 'badge-cond' %}
+        {% else %}{% set ml = 'POOR FIT' %}{% set mc = 'badge-poor' %}{% endif %}
+        {% set cm = {} %}
+        {% for cs in (candidate.criterion_scores or []) %}{% if cm.update({cs.criterion_name: cs}) %}{% endif %}{% endfor %}
+        <tr>
+            <td class="td-cand">
+                #{{ candidate.rank }}&nbsp;&nbsp;{{ candidate.candidate_name or 'Unknown' }}
+                <div class="td-cand-sub">{{ candidate.filename }}</div>
+            </td>
+            {% for crit in criteria %}
+            {% set cs = cm.get(crit.name) %}
+            {% set s = cs.score if cs else 0 %}
+            {% if s >= 8 %}{% set sc = 'hi' %}{% elif s >= 5 %}{% set sc = 'mid' %}{% else %}{% set sc = 'lo' %}{% endif %}
+            <td class="td-score {{ sc }}">{{ '%.1f'|format(s) if cs else '—' }}</td>
+            {% endfor %}
+            {% if total >= 75 %}{% set tc = 'hi' %}{% elif total >= 55 %}{% set tc = 'mid' %}{% else %}{% set tc = 'lo' %}{% endif %}
+            <td class="td-total {{ tc }}">{{ '%.1f'|format(total) }}</td>
+            <td class="td-match"><span class="{{ mc }}">{{ ml }}</span></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<div class="report-footer">
+    {{ report_footer_line }} &nbsp;·&nbsp; Page 2
+</div>
+
+<div class="page-break"></div>
+
+{# ══════════════════════════════════════════
+   SECTION 03 — TOP CANDIDATE PROFILES
+══════════════════════════════════════════ #}
+
+<table class="section-label" style="width:100%;">
+    <tr>
+        <td class="section-num">03</td>
+        <td><div class="section-title">Top Candidate Profiles</div></td>
+    </tr>
+</table>
+<div class="section-sub">Top {{ candidates|length }} candidates recommended for recruiter review</div>
+
+{% set letters = ['A','B','C','D','E','F','G','H'] %}
+{% for candidate in candidates %}
+{% set total = candidate.weighted_total %}
+{% if total >= 75 %}{% set ml = 'TOP MATCH' %}{% set mc = 'badge-top' %}{% set mcolor = report_badge_top %}
+{% elif total >= 55 %}{% set ml = 'STRONG MATCH' %}{% set mc = 'badge-strong' %}{% set mcolor = '#1e3a8a' %}
+{% elif total >= 35 %}{% set ml = 'CONDITIONAL' %}{% set mc = 'badge-cond' %}{% set mcolor = '#92400e' %}
+{% else %}{% set ml = 'POOR FIT' %}{% set mc = 'badge-poor' %}{% set mcolor = '#7f1d1d' %}{% endif %}
+{% set cm = {} %}
+{% for cs in (candidate.criterion_scores or []) %}{% if cm.update({cs.criterion_name: cs}) %}{% endif %}{% endfor %}
+{% set raw = candidate.raw_scores or {} %}
+{% set flags = raw.get('red_flags', []) if raw is mapping else [] %}
+
+<table class="profile-header-table">
+    <tr>
+        <td class="profile-rank-col">
+            <div class="profile-rank-num">Rank {{ candidate.rank }}</div>
+            <div class="profile-score">{{ '%.1f'|format(total) }}</div>
+            <div class="profile-score-den">/ 100 pts</div>
+            <div class="profile-match {{ mc }}" style="color:{{ mcolor }};">{{ ml }}</div>
+        </td>
+        <td>
+            <div class="profile-name">{{ candidate.candidate_name or 'Unknown Candidate' }}</div>
+            <div class="profile-file">{{ candidate.filename }}</div>
+            {% set top_tags = [] %}
+            {% for crit in criteria %}
+            {% set cs = cm.get(crit.name) %}
+            {% if cs and cs.score >= 7 %}{% if top_tags.append(crit.name) %}{% endif %}{% endif %}
+            {% endfor %}
+            {% if top_tags %}
+            <div style="margin-bottom:4px;">
+                {% for tag in top_tags %}<span class="tag">{{ tag }}</span>{% endfor %}
+            </div>
+            {% endif %}
+        </td>
+    </tr>
+</table>
+
+{% if candidate.ai_summary %}
+<p class="profile-summary">{{ candidate.ai_summary }}</p>
+{% endif %}
+
+<table class="profile-scores">
+    <thead>
+        <tr>
+            <td style="width:38%;">Criterion</td>
+            <td class="ps-weight" style="width:8%;">Weight</td>
+            <td class="ps-score" style="width:8%;">Score</td>
+            <td>Justification</td>
+        </tr>
+    </thead>
+    <tbody>
+        {% for crit in criteria %}
+        {% set cs = cm.get(crit.name) %}
+        {% set s = cs.score if cs else 0 %}
+        {% if s >= 8 %}{% set sc = 'hi' %}{% elif s >= 5 %}{% set sc = 'mid' %}{% else %}{% set sc = 'lo' %}{% endif %}
+        <tr>
+            <td>{{ crit.name }}</td>
+            <td class="ps-weight">{{ crit.weight }}%</td>
+            <td class="ps-score {{ sc }}">{{ '%.0f'|format(s) if cs else '—' }}/10</td>
+            <td>{{ cs.justification if cs else '' }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% if flags %}
+<div class="concerns-box">
+    <strong>Concerns:</strong>&nbsp; {{ flags | join(' &nbsp;·&nbsp; ') }}
+</div>
+{% endif %}
+
+{% if not loop.last %}<hr class="profile-divider">{% endif %}
+{% endfor %}
+
+<div class="report-footer">
+    {{ report_footer_line }} &nbsp;·&nbsp; Confidential
+</div>
+
+</body>
+</html>

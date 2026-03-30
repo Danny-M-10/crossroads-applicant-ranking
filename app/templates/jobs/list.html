@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}Job Roles — {{ org_short_name }}{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Job Roles</h1>
+    <a href="/jobs/new" class="inline-flex items-center px-4 py-2 bg-crossroads-nav text-white rounded-lg hover:bg-crossroads-navhover transition-colors font-medium">
+        + New Job Role
+    </a>
+</div>
+
+{% if job_roles %}
+<div class="grid gap-4">
+    {% for role in job_roles %}
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex justify-between items-start">
+            <div>
+                <h2 class="text-lg font-semibold text-gray-900">{{ role.title }}</h2>
+                <p class="text-sm text-gray-600 mt-1 line-clamp-2">{{ role.description[:150] }}{% if role.description|length > 150 %}...{% endif %}</p>
+                <div class="flex flex-wrap gap-2 mt-3">
+                    {% for c in role.criteria %}
+                    <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700">
+                        {{ c.name }} ({{ c.weight }}%)
+                    </span>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="flex gap-2 ml-4 shrink-0">
+                <a href="/jobs/{{ role.id }}/edit" class="px-3 py-1.5 text-sm border border-gray-300 rounded hover:bg-gray-50 transition-colors">Edit</a>
+                <button hx-delete="/jobs/{{ role.id }}"
+                        hx-confirm="Delete this job role?"
+                        hx-target="closest .bg-white"
+                        hx-swap="outerHTML"
+                        class="px-3 py-1.5 text-sm border border-red-300 text-red-600 rounded hover:bg-red-50 transition-colors">
+                    Delete
+                </button>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="bg-white rounded-lg shadow p-8 text-center">
+    <p class="text-gray-500 mb-4">No job roles configured yet.</p>
+    <a href="/jobs/new" class="inline-flex items-center px-4 py-2 bg-crossroads-nav text-white rounded-lg hover:bg-crossroads-navhover transition-colors font-medium">
+        Create Your First Job Role
+    </a>
+</div>
+{% endif %}
+{% endblock %}
