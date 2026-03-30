@@ -31,9 +31,8 @@ BLUE         = RGBColor(0x1E, 0x40, 0xAF)
 GREY         = RGBColor(0x6B, 0x72, 0x80)
 WHITE        = RGBColor(0xFF, 0xFF, 0xFF)
 BLACK        = RGBColor(0x1A, 0x1A, 0x1A)
-TEXT_NAVY    = HEADER_BG
-DOCX_HDR     = DOCX_HEX_HEADER
-DOCX_MXBD    = DOCX_HEX_MATRIX_BORDER
+TEXT_NAVY = HEADER_BG
+DOCX_HDR  = DOCX_HEX_HEADER
 
 
 def _match(total: float):
