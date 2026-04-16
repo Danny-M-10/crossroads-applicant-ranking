@@ -1,0 +1,77 @@
+<style>
+  :root {
+    --cr-nav: {{ color_nav_bg }};
+    --cr-nav-hover: {{ color_nav_bg_hover }};
+    --cr-accent: {{ color_accent }};
+    --cr-soft: {{ color_flash_bg }};
+    --cr-soft-border: {{ color_flash_border }};
+    --cr-on-soft: {{ color_text_on_soft }};
+    --cr-body-text: #0f172a;
+  }
+
+  html {
+    color-scheme: light;
+  }
+
+  body {
+    color: var(--cr-body-text);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  select,
+  input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]),
+  textarea {
+    color: var(--cr-body-text);
+    background-color: #fff;
+  }
+
+  /* Brand utilities — visible even if Tailwind theme.extend colors are not applied */
+  .bg-crossroads-nav {
+    background-color: var(--cr-nav) !important;
+  }
+  .hover\:bg-crossroads-navhover:hover {
+    background-color: var(--cr-nav-hover) !important;
+  }
+  .text-crossroads-nav {
+    color: var(--cr-nav) !important;
+  }
+  .text-crossroads-accent {
+    color: var(--cr-accent) !important;
+  }
+  .bg-crossroads-accent {
+    background-color: var(--cr-accent) !important;
+  }
+  .bg-crossroads-soft {
+    background-color: var(--cr-soft) !important;
+  }
+  .text-crossroads-onsoft {
+    color: var(--cr-on-soft) !important;
+  }
+  .border-crossroads-softborder {
+    border-color: var(--cr-soft-border) !important;
+  }
+  .border-crossroads-nav {
+    border-color: var(--cr-nav) !important;
+  }
+  .bg-crossroads-soft\/50 {
+    background-color: color-mix(in srgb, var(--cr-soft) 55%, transparent);
+  }
+  .hover\:border-crossroads-accent:hover {
+    border-color: var(--cr-accent) !important;
+  }
+  .hover\:text-crossroads-accent:hover {
+    color: var(--cr-accent) !important;
+  }
+  .focus\:border-crossroads-accent:focus {
+    border-color: var(--cr-accent) !important;
+  }
+  .focus\:ring-crossroads-accent:focus {
+    --tw-ring-color: var(--cr-accent);
+  }
+  .file\:bg-crossroads-soft::file-selector-button {
+    background-color: var(--cr-soft) !important;
+  }
+  .file\:text-crossroads-onsoft::file-selector-button {
+    color: var(--cr-on-soft) !important;
+  }
+</style>

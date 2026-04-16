@@ -4,6 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}{{ org_short_name }} — {{ product_name }}{% endblock %}</title>
+    {% include "partials/_theme_styles.html" %}
+    <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
         theme: {
@@ -22,7 +24,6 @@
         }
       };
     </script>
-    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/htmx.org@2.0.3"></script>
     <style>
         [hx-indicator] .htmx-indicator { display: none; }
